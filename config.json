@@ -1,0 +1,64 @@
+{
+  "game_window": {
+    "title": "Pokemon Game",
+    "comment": "Nome da janela do jogo para focar"
+  },
+
+  "regions": {
+    "battle_indicator": {
+      "coords": [100, 50, 200, 100],
+      "label": "Battle Indicator",
+      "color": [255, 0, 0],
+      "comment": "Região que detecta se está em batalha (vermelho)"
+    },
+    "pokemon_name": {
+      "coords": [50, 150, 250, 200],
+      "label": "Pokemon Name",
+      "color": [0, 255, 0],
+      "comment": "Região onde aparece o nome do Pokemon (verde)"
+    },
+    "pokemon_sprite": {
+      "coords": [400, 100, 550, 250],
+      "label": "Pokemon Sprite",
+      "color": [0, 0, 255],
+      "comment": "Região do sprite do Pokemon inimigo (azul)"
+    },
+    "battle_ui": {
+      "coords": [0, 400, 640, 480],
+      "label": "Battle UI",
+      "color": [255, 255, 0],
+      "comment": "Região da interface de batalha (amarelo)"
+    }
+  },
+
+  "controls": {
+    "move_key_1": "left",
+    "move_key_2": "right",
+    "flee_key": "z",
+    "interact_key": "x",
+    "comment": "Teclas de controle do jogo"
+  },
+
+  "detection": {
+    "hash_threshold": 5,
+    "ocr_language": "eng",
+    "similarity_threshold": 0.95,
+    "comment": "Parâmetros para detecção de imagens e OCR"
+  },
+
+  "visualization": {
+    "enabled": true,
+    "bbox_thickness": 2,
+    "font_scale": 0.6,
+    "font_thickness": 2,
+    "update_interval": 0.1,
+    "comment": "Configurações de visualização das bounding boxes"
+  },
+
+  "bot_behavior": {
+    "movement_delay": 1.0,
+    "battle_start_delay": 2.0,
+    "action_delay": 0.5,
+    "comment": "Delays entre ações do bot (em segundos)"
+  }
+}
