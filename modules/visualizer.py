@@ -1,13 +1,7 @@
 """
-Módulo de Visualização
-=======================
-Responsável por exibir a tela com bounding boxes em tempo real.
-
-Funcionalidades:
-- Desenho de bounding boxes coloridas
-- Labels identificando cada região
-- Atualização em tempo real
-- Overlay de informações do bot
+Módulo de Visualização - IMPLEMENTADO
+======================================
+Exibe bounding boxes em tempo real sobre a tela.
 """
 
 import cv2
@@ -19,20 +13,11 @@ import time
 
 class BoundingBoxVisualizer:
     """
-    Gerencia a visualização das bounding boxes em tempo real.
-
-    Esta classe é o CORE da feature solicitada. Ela cria uma janela
-    que mostra a tela do jogo com retângulos coloridos e labels em
-    cada região de detecção.
+    Visualização em tempo real com bounding boxes coloridas.
+    FEATURE PRINCIPAL DO BOT!
     """
 
     def __init__(self, config: dict, screen_capture, state_machine=None):
-        """
-        Args:
-            config: Configurações do bot
-            screen_capture: Instância de ScreenCapture
-            state_machine: Instância de StateMachine (opcional)
-        """
         self.config = config
         self.screen = screen_capture
         self.state_machine = state_machine
@@ -53,15 +38,19 @@ class BoundingBoxVisualizer:
         self.current_frame = None
         self.window_name = "Pokemon Bot - Detecção em Tempo Real"
 
+        # FPS counter
+        self.fps = 0
+        self.frame_count = 0
+        self.fps_start_time = time.time()
+
     def draw_bounding_boxes(self, base_image: np.ndarray) -> np.ndarray:
         """
         Desenha todas as bounding boxes na imagem.
 
-        Args:
-            base_image: Imagem base (formato OpenCV BGR)
-
-        Returns:
-            Imagem com as bounding boxes desenhadas
+        Cada região tem:
+        - Retângulo colorido
+        - Label com fundo
+        - Cor específica (definida no config)
         """
         annotated = base_image.copy()
 
@@ -83,7 +72,7 @@ class BoundingBoxVisualizer:
             # Prepara texto do label
             label_text = f"{label}"
 
-            # Calcula tamanho do texto para criar fundo
+            # Calcula tamanho do texto
             (text_width, text_height), baseline = cv2.getTextSize(
                 label_text,
                 cv2.FONT_HERSHEY_SIMPLEX,
@@ -91,11 +80,13 @@ class BoundingBoxVisualizer:
                 self.font_thickness
             )
 
-            # Desenha fundo do label (para melhor legibilidade)
+            # Posição do label (acima do retângulo)
             label_y = coords[1] - 10
             if label_y < text_height + 10:
-                label_y = coords[1] + text_height + 10  # Se não couber em cima, coloca embaixo
+                # Se não couber em cima, coloca embaixo
+                label_y = coords[1] + text_height + 10
 
+            # Desenha fundo do label (para melhor legibilidade)
             cv2.rectangle(
                 annotated,
                 (coords[0], label_y - text_height - 5),
@@ -119,24 +110,18 @@ class BoundingBoxVisualizer:
 
     def add_overlay_info(self, image: np.ndarray) -> np.ndarray:
         """
-        Adiciona informações do bot como overlay na imagem.
+        Adiciona informações do bot como overlay.
 
-        Args:
-            image: Imagem para adicionar overlay
-
-        Returns:
-            Imagem com overlay de informações
-
-        Informações exibidas:
-        - Estado atual do bot
-        - Estatísticas (batalhas, skins encontradas, etc)
-        - FPS da visualização
+        Exibe:
+        - Estado atual
+        - FPS
+        - Estatísticas (se disponível)
         """
         overlay = image.copy()
         height, width = image.shape[:2]
 
         # Cria painel semi-transparente no topo
-        panel_height = 100
+        panel_height = 120
         cv2.rectangle(
             overlay,
             (0, 0),
@@ -155,34 +140,74 @@ class BoundingBoxVisualizer:
 
         # Estado atual
         if self.state_machine:
-            state_text = f"Estado: {self.state_machine.get_state_name().upper()}"
+            state_name = self.state_machine.get_state_name().upper()
+            state_color = self._get_state_color(state_name)
+
             cv2.putText(
                 image,
-                state_text,
+                f"Estado: {state_name}",
                 (10, y_offset),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
-                (0, 255, 0),
+                state_color,
                 2
             )
+            y_offset += line_height
 
-        # TODO: Adicionar mais informações
-        # - Último Pokémon detectado
-        # - Número de batalhas
-        # - Skins encontradas
-        # - Tempo de execução
+        # FPS
+        cv2.putText(
+            image,
+            f"FPS: {self.fps:.1f}",
+            (10, y_offset),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (100, 200, 255),
+            2
+        )
+        y_offset += line_height
+
+        # Estatísticas (se disponível)
+        if self.state_machine and hasattr(self.state_machine, 'statistics'):
+            stats = self.state_machine.statistics
+            if hasattr(stats, 'encounters'):
+                cv2.putText(
+                    image,
+                    f"Batalhas: {stats.encounters} | Skins: {stats.skins_found}",
+                    (10, y_offset),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 100),
+                    2
+                )
+
+        # Instruções
+        cv2.putText(
+            image,
+            "Pressione 'q' ou ESC para fechar",
+            (10, height - 15),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (200, 200, 200),
+            1
+        )
 
         return image
 
-    def start(self) -> None:
-        """
-        Inicia a visualização em uma thread separada.
+    def _get_state_color(self, state_name: str) -> Tuple[int, int, int]:
+        """Retorna cor baseada no estado."""
+        color_map = {
+            'IDLE': (128, 128, 128),      # Cinza
+            'FARMING': (0, 255, 0),       # Verde
+            'IN_BATTLE': (0, 165, 255),   # Laranja
+            'PAUSED': (0, 255, 255),      # Amarelo
+            'STOPPED': (0, 0, 255)        # Vermelho
+        }
+        return color_map.get(state_name, (255, 255, 255))
 
-        A visualização roda em loop constante capturando a tela,
-        desenhando as bounding boxes e exibindo em uma janela.
-        """
+    def start(self) -> None:
+        """Inicia a visualização em thread separada."""
         if not self.enabled:
-            print("[VISUALIZAÇÃO] Visualização desabilitada no config")
+            print("[VISUALIZAÇÃO] Desabilitada no config")
             return
 
         if self.running:
@@ -192,20 +217,19 @@ class BoundingBoxVisualizer:
         self.running = True
         self.thread = threading.Thread(target=self._visualization_loop, daemon=True)
         self.thread.start()
-        print("[VISUALIZAÇÃO] Iniciada")
+        print("[VISUALIZAÇÃO] Thread iniciada")
 
     def _visualization_loop(self) -> None:
         """
         Loop principal da visualização (roda em thread separada).
 
-        TODO: Implementar loop de visualização
-            1. Capturar tela
-            2. Converter para OpenCV
-            3. Desenhar bounding boxes
-            4. Adicionar overlay de informações
-            5. Mostrar na janela
-            6. Aguardar update_interval
-            7. Repetir
+        Fluxo:
+        1. Captura tela
+        2. Desenha bounding boxes
+        3. Adiciona overlay
+        4. Exibe na janela
+        5. Calcula FPS
+        6. Aguarda intervalo
         """
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
@@ -224,40 +248,48 @@ class BoundingBoxVisualizer:
                 # Armazena frame atual
                 self.current_frame = frame
 
+                # Calcula FPS
+                self.frame_count += 1
+                elapsed = time.time() - self.fps_start_time
+                if elapsed >= 1.0:
+                    self.fps = self.frame_count / elapsed
+                    self.frame_count = 0
+                    self.fps_start_time = time.time()
+
                 # Exibe na janela
                 cv2.imshow(self.window_name, frame)
 
                 # Permite fechar com 'q' ou 'ESC'
                 key = cv2.waitKey(int(self.update_interval * 1000))
                 if key == ord('q') or key == 27:  # ESC
+                    print("\n[VISUALIZAÇÃO] Fechando por input do usuário")
                     self.stop()
                     break
 
             except Exception as e:
-                print(f"[VISUALIZAÇÃO] Erro: {e}")
+                print(f"[ERRO] Visualização: {e}")
                 time.sleep(1)
 
         cv2.destroyAllWindows()
+        print("[VISUALIZAÇÃO] Janela fechada")
 
     def stop(self) -> None:
-        """
-        Para a visualização.
-        """
+        """Para a visualização."""
         if not self.running:
             return
 
         self.running = False
-        if self.thread:
+        if self.thread and self.thread.is_alive():
             self.thread.join(timeout=2)
 
-        print("[VISUALIZAÇÃO] Parada")
+        print("[VISUALIZAÇÃO] Thread parada")
 
     def save_current_frame(self, filename: str) -> bool:
         """
         Salva o frame atual em disco.
 
         Args:
-            filename: Nome do arquivo (ex: 'debug/frame.png')
+            filename: Caminho do arquivo (ex: 'debug/skin_001.png')
 
         Returns:
             True se salvou com sucesso
@@ -266,22 +298,19 @@ class BoundingBoxVisualizer:
             print("[VISUALIZAÇÃO] Nenhum frame disponível")
             return False
 
-        cv2.imwrite(filename, self.current_frame)
-        print(f"[VISUALIZAÇÃO] Frame salvo: {filename}")
-        return True
+        try:
+            cv2.imwrite(filename, self.current_frame)
+            print(f"[VISUALIZAÇÃO] Frame salvo: {filename}")
+            return True
+        except Exception as e:
+            print(f"[ERRO] Salvar frame: {e}")
+            return False
 
     def highlight_region(self, region_name: str, duration: float = 2.0) -> None:
         """
-        Destaca uma região específica temporariamente.
+        Destaca uma região temporariamente com efeito piscante.
 
-        Args:
-            region_name: Nome da região para destacar
-            duration: Tempo em segundos para manter o destaque
-
-        TODO: Implementar sistema de highlight
-            - Aumentar espessura da bounding box
-            - Adicionar efeito piscante
-            - Útil para debug visual
+        TODO: Implementar efeito de highlight para debug visual
         """
         pass
 
@@ -297,15 +326,9 @@ class DebugVisualizer:
                                title: str = "Comparação") -> None:
         """
         Mostra duas imagens lado a lado para comparação.
-
-        Args:
-            base_img: Imagem base (sprite padrão)
-            captured_img: Imagem capturada (sprite da batalha)
-            title: Título da janela
-
-        Útil para debugar a detecção de skins.
+        Útil para debugar detecção de skins.
         """
-        # Redimensiona para mesmo tamanho se necessário
+        # Redimensiona para mesmo tamanho
         h1, w1 = base_img.shape[:2]
         h2, w2 = captured_img.shape[:2]
         max_h = max(h1, h2)
@@ -319,12 +342,14 @@ class DebugVisualizer:
         comparison = np.hstack([base_img, captured_img])
 
         # Adiciona labels
+        h, w = base_img.shape[:2]
         cv2.putText(comparison, "BASE", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(comparison, "CAPTURADO", (w1 + 10, 30),
+        cv2.putText(comparison, "CAPTURADO", (w + 10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         cv2.imshow(title, comparison)
+        print(f"[DEBUG] Pressione qualquer tecla para fechar '{title}'")
         cv2.waitKey(0)
         cv2.destroyWindow(title)
 
@@ -334,12 +359,12 @@ class DebugVisualizer:
                                text_result: str) -> None:
         """
         Visualiza as etapas de pré-processamento do OCR.
-
-        Args:
-            original: Imagem original
-            processed: Imagem após processamento
-            text_result: Texto extraído pelo OCR
         """
+        # Redimensiona se necessário
+        if original.shape != processed.shape:
+            h, w = original.shape[:2]
+            processed = cv2.resize(processed, (w, h))
+
         comparison = np.hstack([original, processed])
 
         # Adiciona o texto extraído
@@ -347,7 +372,6 @@ class DebugVisualizer:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         cv2.imshow("OCR Preprocessing", comparison)
+        print(f"[DEBUG] Pressione qualquer tecla para fechar")
         cv2.waitKey(0)
         cv2.destroyWindow("OCR Preprocessing")
-
-
