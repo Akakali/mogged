@@ -1,28 +1,42 @@
-# Dependências do Bot de Farm Pokémon
-# =====================================
-# Instale com: pip install -r requirements.txt
+# ====================================
+# POKEMON FARM BOT - DEPENDÊNCIAS
+# ====================================
 
-# Captura e manipulação de imagens
+# Captura de tela
 Pillow>=10.0.0
 
-# Processamento de imagem e visão computacional
+# Processamento de imagens
 opencv-python>=4.8.0
-
-# OCR (Optical Character Recognition)
-pytesseract>=0.3.10
-# NOTA: Requer instalação do Tesseract-OCR no sistema
-# Windows: https://github.com/UB-Mannheim/tesseract/wiki
-# Linux: sudo apt-get install tesseract-ocr
-# Mac: brew install tesseract
-
-# Perceptual hashing para comparação de imagens
-imagehash>=4.3.1
-
-# Controle de teclado e mouse
-pynput>=1.7.6
-
-# Utilitários
 numpy>=1.24.0
 
-# Opcional: Para cálculo de SSIM (Structural Similarity)
+# OCR (requer Tesseract instalado no sistema)
+pytesseract>=0.3.10
+
+# Comparação de imagens (perceptual hashing)
+imagehash>=4.3.1
+
+# Controle de teclado/mouse
+pynput>=1.7.6
+
+# Opcional: SSIM mais preciso
 scikit-image>=0.21.0
+
+# ====================================
+# NOTAS DE INSTALAÇÃO
+# ====================================
+#
+# 1. TESSERACT-OCR (OBRIGATÓRIO):
+#    - Windows: https://github.com/UB-Mannheim/tesseract/wiki
+#    - Linux: sudo apt-get install tesseract-ocr
+#    - macOS: brew install tesseract
+#
+# 2. Instalar dependências Python:
+#    pip install -r requirements.txt
+#
+# 3. Se tiver problemas com opencv:
+#    pip install opencv-python-headless
+#
+# 4. Para melhor performance OCR:
+#    pip install pytesseract[lang]  # Pacotes de idiomas extras
+#
+# ====================================
